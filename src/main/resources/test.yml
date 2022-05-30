@@ -1,0 +1,32 @@
+filas:
+  - nome: Q1
+    qtdServidores: 2
+    capacidade: 3
+    inicialChegada: 2.0
+    finalChegada: 3.0
+    inicialServico: 2.0
+    finalServico: 5.0
+  - nome: Q2
+    qtdServidores: 1
+    capacidade: 3
+    inicialServico: 3.0
+    finalServico: 5.0
+
+quantidadeExecucoes: 1
+
+sementes:
+  - 1
+  - 88
+  - 4
+  - 30
+  - 22
+
+eventoInicial: CHEGADA
+tempoEventoInicial: 2.5
+
+qtdAleatorios: 100000
+#qtdAleatorios: 20
+multiplicador: 70
+incremento: 31
+mod: 65537
+deveGerarAleatorio: true
