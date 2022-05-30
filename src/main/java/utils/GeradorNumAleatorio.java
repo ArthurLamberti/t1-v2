@@ -7,7 +7,7 @@ import java.util.List;
 
 public class GeradorNumAleatorio {
     public List<Double> gerar(Configuracao configuracao) {
-        if(!configuracao.getDeveGerarAleatorio()){
+        if (!configuracao.getDeveGerarAleatorio()) {
             return mock();
         }
         List<Double> aleatorios = new ArrayList<>();

@@ -1,0 +1,11 @@
+simulacao/Evento.class
+utils/GeradorNumAleatorio.class
+simulacao/Fila.class
+enums/TipoEvento.class
+simulacao/Filas.class
+simulacao/ResultadoExecucao.class
+Main.class
+config/Configuracao.class
+config/LoadConfig.class
+simulacao/Simulador.class
+config/ConfiguracaoFila.class
