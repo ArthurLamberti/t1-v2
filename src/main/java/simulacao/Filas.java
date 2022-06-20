@@ -2,11 +2,12 @@ package simulacao;
 
 import config.Configuracao;
 import config.ConfiguracaoFila;
+import config.Destino;
+import config.DestinoCalculado;
 import enums.TipoEvento;
+import utils.GeradorNumAleatorio;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 public class Filas {
 
@@ -18,6 +19,7 @@ public class Filas {
     private ArrayList<Evento> filaExecucaoEventos;
     private ArrayList<Evento> historicoEventos;
     private Double diferencaTempo;
+    private GeradorNumAleatorio geradorNumAleatorio;
 
     private int qtdSaida, qtdChegada, qtdPassagem;
 
@@ -33,6 +35,7 @@ public class Filas {
             Fila fila = new Fila(configuracaoFila);
             filas.add(fila);
         }
+        geradorNumAleatorio = new GeradorNumAleatorio();
     }
 
     public ResultadoExecucao run() {
@@ -41,18 +44,18 @@ public class Filas {
         this.historicoEventos.add(eventoInicial);
         this.filaExecucaoEventos.add(eventoInicial);
         //ENQUANTO HOUVER NUMEROS ALEATORIOS, EXECUTA
-        try{
+        try {
             while (!numerosAleatorios.isEmpty()) {
-                if(numerosAleatorios.size() % 10000 == 0) {
+                if (numerosAleatorios.size() % 10000 == 0) {
                     System.out.println(numerosAleatorios.size());
                 }
                 efetuarEvento();
             }
-        } catch (ArrayStoreException e){
+        } catch (ArrayStoreException e) {
             System.out.println(e.getMessage());
         }
 
-        ResultadoExecucao resultadoExecucao = new ResultadoExecucao(filas,tempoGlobal,configuracao);
+        ResultadoExecucao resultadoExecucao = new ResultadoExecucao(filas, tempoGlobal, configuracao);
         resultadoExecucao.printarResultados();
         return resultadoExecucao;
     }
@@ -68,21 +71,22 @@ public class Filas {
         if (TipoEvento.CHEGADA.equals(evento.getTipoEvento())) {
             realizarChegada(evento.getTempo(), tempoGlobalAntigo); //tempo evento antigo,
         } else if (TipoEvento.SAIDA.equals(evento.getTipoEvento())) {
-            realizarSaida(evento.getOrigem(),evento.getTempo(),tempoGlobalAntigo);
+            realizarSaida(evento.getOrigem(), evento.getTempo(), tempoGlobalAntigo);
         } else if (TipoEvento.PASSAGEM.equals(evento.getTipoEvento())) {
-            realizarPassagem(evento.getOrigem(), evento.getDestino(),evento.getTempo(),tempoGlobalAntigo);
+            realizarPassagem(evento.getOrigem(), evento.getDestino(), evento.getTempo(), tempoGlobalAntigo);
         }
     }
 
-    private void realizarChegada(Double tempoEvento, Double tempoGlobalAntigo) {
+    private void realizarChegada(Double tempoEvento, Double tempoGlobalAntigo) { //TODO ta chegando apenas na posicao 0 e 1, investigar
         atualizarTempos(tempoEvento, tempoGlobalAntigo);
         Fila fila1 = this.filas.get(0);
         //CONTABILIZA TEMPOS
-        if (fila1.getQtdNaFila() < fila1.getConfiguracoes().getCapacidade()) {
+        if (fila1.getConfiguracoes().isFilaInfinita() || fila1.getQtdNaFila() < fila1.getConfiguracoes().getCapacidade()) {
             fila1.chegouNaFila(); //FILA++
-
+            //TODO se for infinitio, nao verificar os servidores
             if (fila1.getQtdNaFila() <= fila1.getConfiguracoes().getQtdServidores()) {
-                agendarPassagem(this.filas.get(0), this.filas.get(1)); //P12
+                Fila filaDestino = buscarFilaDestino(fila1);
+                agendarPassagem(fila1, filaDestino); //P12
             }
         } else {
             fila1.adicionarPerda();
@@ -91,8 +95,20 @@ public class Filas {
         agendarChegada(fila1); //CH1
     }
 
+    private Destino sortearDestino(Fila fila1) {
+        List<DestinoCalculado> destinoCalculados = fila1.getConfiguracoes().getDestinoCalculados();
+        Double prob = geradorNumAleatorio.numAleatorio();
+        Optional<DestinoCalculado> destino = destinoCalculados.stream().filter(dest ->
+                dest.getMinProbabilidade() <= prob && dest.getMaxProbabilidade() > prob
+        ).findFirst();
+        if (destino.isPresent()) {
+            return fila1.getConfiguracoes().getDestinos().stream().filter(dest -> dest.getFila().equals(destino.get().getFila())).findFirst().get();
+        }
+        return null;
+    }
+
     private void atualizarTempos(Double tempoEvento, Double tempoGlobalAntigo) {
-        for(Fila fila: this.filas) {
+        for (Fila fila : this.filas) {
             fila.contabilizarTempo(tempoEvento - tempoGlobalAntigo);
         }
     }
@@ -105,28 +121,49 @@ public class Filas {
         }
     }
 
-    private void realizarPassagem(Fila fila1, Fila fila2, Double tempoEvento, Double tempoGlobalAntigo) {
+    private void realizarPassagem(Fila origem, Fila destino, Double tempoEvento, Double tempoGlobalAntigo) {
         atualizarTempos(tempoEvento, tempoGlobalAntigo);
-        fila1.saiuDaFila();
+        origem.saiuDaFila();
+        Fila filaDestino;
 
-        if (fila1.getQtdNaFila() >= fila1.getConfiguracoes().getQtdServidores()) {
-            agendarPassagem(fila1, fila2); //P12
+        //TODO mudar logica pra sortear fila destino
+        if (origem.getQtdNaFila() >= origem.getConfiguracoes().getQtdServidores()) {
+            filaDestino = buscarFilaDestino(origem);
+            if (Objects.isNull(filaDestino)) {
+                agendarSaida(origem, "origem passagem");
+            } else {
+                agendarPassagem(origem, filaDestino); //P12
+            }
         }
-
-        if (fila2.getQtdNaFila() < fila2.getConfiguracoes().getCapacidade()) {
-            fila2.chegouNaFila();
+        //TODO VERIFICAR QUANDO F1 EH DESTINO
+        if (destino.getConfiguracoes().isFilaInfinita() || destino.getQtdNaFila() < destino.getConfiguracoes().getCapacidade()) {
+            destino.chegouNaFila();
 //
-            if(fila2.getQtdNaFila() <= fila2.getConfiguracoes().getQtdServidores()) {
-                agendarSaida(fila2, "realizar passagem");
+            if (destino.getQtdNaFila() <= destino.getConfiguracoes().getQtdServidores()) {
+                filaDestino = buscarFilaDestino(destino);
+                if (Objects.isNull(filaDestino)) {
+                    agendarSaida(destino, "destino passagem");
+                } else {
+                    agendarPassagem(destino, filaDestino); //P12
+                }
             }
         } else {
-            fila2.adicionarPerda();
+            destino.adicionarPerda();
         }
 
     }
 
+    private Fila buscarFilaDestino(Fila origem) {
+        Destino novoDestino = sortearDestino(origem);
+        Fila fila = null;
+        if (Objects.nonNull(novoDestino)) {
+            fila = this.filas.stream().filter(f -> f.getConfiguracoes().getNome().equals(novoDestino.getFila())).findFirst().get();
+        }
+        return fila;
+    }
+
     private void agendarPassagem(Fila origem, Fila destino) {
-        if(this.numerosAleatorios.isEmpty()){
+        if (this.numerosAleatorios.isEmpty()) {
             throw new ArrayStoreException("Acabou os numeros aleatorios");
         }
         qtdPassagem++;
@@ -140,11 +177,11 @@ public class Filas {
         this.filaExecucaoEventos.add(evento);
         this.filaExecucaoEventos.sort(Comparator.comparing(Evento::getTempo));
         this.historicoEventos.add(evento);
-        this.historicoEventos.sort(Comparator.comparing(Evento::getTempo));//ordena eventos a serem executados pelo tempo
+//        this.historicoEventos.sort(Comparator.comparing(Evento::getTempo));//ordena eventos a serem executados pelo tempo
     }
 
     private void agendarSaida(Fila origem, String origemSaida) {
-        if(this.numerosAleatorios.isEmpty()){
+        if (this.numerosAleatorios.isEmpty()) {
             throw new ArrayStoreException("Acabou os numeros aleatorios");
         }
         qtdSaida++;
@@ -155,7 +192,7 @@ public class Filas {
     }
 
     private void agendarChegada(Fila destino) {
-        if(this.numerosAleatorios.isEmpty()){
+        if (this.numerosAleatorios.isEmpty()) {
             throw new ArrayStoreException("Acabou os numeros aleatorios");
         }
         qtdChegada++;

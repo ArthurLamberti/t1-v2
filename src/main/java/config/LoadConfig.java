@@ -1,5 +1,6 @@
 package config;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
@@ -13,6 +14,7 @@ public class LoadConfig {
 
         try {
             ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+            mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             mapper.findAndRegisterModules();
 
             return mapper.readValue(inputStream, Configuracao.class);

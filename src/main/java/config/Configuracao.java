@@ -23,4 +23,5 @@ public class Configuracao {
     Integer mod;
     Integer qtdAleatorios;
     Boolean deveGerarAleatorio;
+
 }

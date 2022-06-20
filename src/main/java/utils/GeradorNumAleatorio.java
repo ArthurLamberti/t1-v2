@@ -4,8 +4,15 @@ import config.Configuracao;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 public class GeradorNumAleatorio {
+    Random random;
+
+    public GeradorNumAleatorio (){
+        random = new Random();
+    }
+
     public List<Double> gerar(Configuracao configuracao) {
         if (!configuracao.getDeveGerarAleatorio()) {
             return mock();
@@ -24,6 +31,11 @@ public class GeradorNumAleatorio {
         }
         return aleatorios;
     }
+
+    public Double numAleatorio() {
+        return random.nextDouble();
+    }
+
 
     private List<Double> mock() {
         List<Double> mock = new ArrayList<>();

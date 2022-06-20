@@ -1,16 +1,36 @@
 filas:
-  - nome: Q1
-    qtdServidores: 2
-    capacidade: 3
-    inicialChegada: 2.0
-    finalChegada: 3.0
-    inicialServico: 2.0
-    finalServico: 5.0
-  - nome: Q2
+  - nome: F1
     qtdServidores: 1
-    capacidade: 3
-    inicialServico: 3.0
-    finalServico: 5.0
+    inicialChegada: 1.0
+    finalChegada: 4.0
+    inicialServico: 1.0
+    finalServico: 1.5
+    filaInfinita: true
+    destinos:
+      - fila: F2
+        probabilidade: 0.8
+      - fila: F3
+        probabilidade: 0.2
+
+  - nome: F2
+    qtdServidores: 3
+    capacidade: 5
+    inicialServico: 5.0
+    finalServico: 10.0
+    destinos:
+      - fila: F1
+        probabilidade: 0.3
+      - fila: F3
+        probabilidade: 0.5
+
+  - nome: F3
+    qtdServidores: 2
+    capacidade: 8
+    inicialServico: 10.0
+    finalServico: 20.0
+    destinos:
+      - fila: F2
+        probabilidade: 0.7
 
 quantidadeExecucoes: 5
 

@@ -5,6 +5,9 @@ import config.ConfiguracaoFila;
 import lombok.Data;
 import utils.GeradorNumAleatorio;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 
 @Data
@@ -25,9 +28,9 @@ public class Simulador {
         resultadoExecucaos = new ArrayList<>();
         tempoMedioTotalExecucao = 0;
         perdasMedia = new double[this.configuracao.getFilas().size()];
-        temposMedios = new double[this.configuracao.getFilas().size()][this.configuracao.getFilas().get(0).getCapacidade() + 1];
+        temposMedios = new double[this.configuracao.getFilas().size()][15];
         for (int i = 0; i < this.configuracao.getFilas().size(); i++) {
-            for (int j = 0; j < this.configuracao.getFilas().get(i).getCapacidade(); j++) {
+            for (int j = 0; j < 15; j++) {
                 temposMedios[i][j] = 0;
             }
         }
@@ -49,24 +52,36 @@ public class Simulador {
             calcularMedia(resultadoExecucao);
         }
         tempoMedioTotalExecucao = tempoMedioTotalExecucao / Double.valueOf(this.configuracao.getQuantidadeExecucoes());
-        System.out.println("┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────");
-        System.out.println("│TEMPO TOTAL MEDIO DE EXECUCAO: " + tempoMedioTotalExecucao);
-        System.out.println("└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n");
-        //MEDIA DOS RESULTADOS
-        for (int fila = 0; fila < temposMedios.length; fila++) {
-            System.out.println("┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────");
-            ConfiguracaoFila fila1 = this.configuracao.getFilas().get(fila);
-            System.out.println("│FILA F" + (fila + 1) + " G/G/" + fila1.getQtdServidores() + "/" + fila1.getCapacidade());
-            if (Objects.nonNull(fila1.getInicialChegada())) {
-                System.out.println("│Chegada: " + fila1.getInicialChegada() + "..." + fila1.getFinalChegada());
+        try {
+            BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter("./resultado.txt"));
+
+            bufferedWriter.append("┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n");
+            bufferedWriter.append("│TEMPO TOTAL MEDIO DE EXECUCAO: " + tempoMedioTotalExecucao + "\n");
+            bufferedWriter.append("└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n");
+            //MEDIA DOS RESULTADOS
+            for (int fila = 0; fila < temposMedios.length; fila++) {
+                bufferedWriter.append("┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n");
+                ConfiguracaoFila fila1 = this.configuracao.getFilas().get(fila);
+                if(fila1.getCapacidade() == 0){
+                    bufferedWriter.append("│FILA F" + (fila + 1) + " G/G/" + fila1.getQtdServidores()+"\n");
+                } else {
+                    bufferedWriter.append("│FILA F" + (fila + 1) + " G/G/" + fila1.getQtdServidores() + "/" + fila1.getCapacidade()+"\n");
+                }
+
+                if (Objects.nonNull(fila1.getInicialChegada())) {
+                    bufferedWriter.append("│Chegada: " + fila1.getInicialChegada() + "..." + fila1.getFinalChegada()+"\n");
+                }
+                bufferedWriter.append("│Servico: " + fila1.getInicialServico() + "..." + fila1.getFinalServico()+"\n");
+                bufferedWriter.append("│Printando tempo para fila: " + fila1 + 1+"\n");
+                printarTempoFila(fila, bufferedWriter);
+
+                bufferedWriter.append("│Quantidade media de perdas: " + perdasMedia[fila] / this.configuracao.getQuantidadeExecucoes() +"\n");
+
+                bufferedWriter.append("└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n");
             }
-            System.out.println("│Servico: " + fila1.getInicialServico() + "..." + fila1.getFinalServico());
-            System.out.println("│Printando tempo para fila: " + fila1 + 1);
-            printarTempoFila(fila);
-
-            System.out.println("│Quantidade media de perdas: " + perdasMedia[fila] / this.configuracao.getQuantidadeExecucoes());
-
-            System.out.println("└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n");
+            bufferedWriter.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -80,16 +95,19 @@ public class Simulador {
         tempoMedioTotalExecucao += resultadoExecucao.getTempoGlobal();
     }
 
-    private void printarTempoFila(int fila) {
-        System.out.println("│Quantidade de itens na fila\t│\tTempo na fila\t\t\t │\tProbabilidade da fila estar cheia");
+    private void printarTempoFila(int fila, BufferedWriter bufferedWriter) throws IOException {
+        bufferedWriter.append("│Quantidade de itens na fila\t│\tTempo na fila\t\t\t │\tProbabilidade da fila estar cheia"+"\n");
         for (int tempo1 = 0; tempo1 < temposMedios[fila].length; tempo1++) {
-            double media = temposMedios[fila][tempo1] / Double.valueOf(this.configuracao.getQuantidadeExecucoes());
-            String tempo = String.format("%.4f", media);
-            StringBuilder linha = new StringBuilder("│\t\t\t\t" + fila + "\t\t\t\t│\t" + tempo);
-            int baseTab = linha.length();
-            String probabilidade = String.format("%.2f", media * 100.0 / this.tempoMedioTotalExecucao);
-            linha.append("\t\t\t ").append("\t\t │\t\t").append(probabilidade).append("%");
-            System.out.println(linha);
+            if (temposMedios[fila][tempo1] != 0D) {
+
+                double media = temposMedios[fila][tempo1] / Double.valueOf(this.configuracao.getQuantidadeExecucoes());
+                String tempo = String.format("%.4f", media);
+                StringBuilder linha = new StringBuilder("│\t\t\t\t" + tempo1 + "\t\t\t\t│\t" + tempo);
+                int baseTab = linha.length();
+                String probabilidade = String.format("%.2f", media * 100.0 / this.tempoMedioTotalExecucao);
+                linha.append("\t\t\t ").append("\t\t │\t\t").append(probabilidade).append("%"+"\n");
+                bufferedWriter.append(linha);
+            }
         }
     }
 
